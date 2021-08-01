@@ -4,6 +4,7 @@ import rospy
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
 from scipy.spatial import KDTree
+from std_msgs.msg import Int32
 
 import math
 
@@ -43,26 +44,21 @@ class WaypointUpdater(object):
         self.base_waypoints = None
         self.pose = None
         self.base_lane = None
-        self.stopline_wp_idx = None
+        self.stopline_wp_idx = -1
 
         # rospy.spin()
-        rospy.loginfo('Initializing me')
         self.loop()
 
     def loop(self):
-        rospy.loginfo('start looping')
         rate = rospy.Rate(50)
         while not rospy.is_shutdown():
-            rospy.loginfo('start looping in')
             if self.pose and self.base_waypoints:
-                rospy.loginfo('start looping in 2')
                 # Get closest waypoints
-                closest_waypoint_idx = self.get_closest_waypoint_idx()
-                self.publish_waypoints(closest_waypoint_idx)
+                # closest_waypoint_idx = self.get_closest_waypoint_idx()
+                self.publish_waypoints()
             rate.sleep()
 
     def get_closest_waypoint_idx(self):
-        rospy.loginfo('start calculating')
         x = self.pose.pose.position.x
         y = self.pose.pose.position.y
         closest_idx = self.waypoint_tree.query([x, y], 1)[1]
@@ -81,15 +77,14 @@ class WaypointUpdater(object):
         if val > 0:
             closest_idx = (closest_idx + 1) % len(self.waypoints_2d)
 
-        rospy.loginfo('stop calculating')
         return closest_idx
 
-    def publish_waypoints(self, closest_idx):
+    def publish_waypoints(self):
         # lane = Lane()
         # lane.header = self.base_waypoints.header
         # lane.waypoints = self.base_waypoints.waypoints[closest_idx:closest_idx + LOOKAHEAD_WPS]
         lane = self.generate_lane()
-        rospy.loginfo('Publishing %d', len(lane.waypoints))
+#         rospy.loginfo('Publishing %d', len(lane.waypoints))
         self.final_waypoints_pub.publish(lane)
 
     def generate_lane(self):
@@ -97,11 +92,13 @@ class WaypointUpdater(object):
 
         closest_idx = self.get_closest_waypoint_idx()
         farthest_idx = closest_idx + LOOKAHEAD_WPS
-        base_waypoints = self.base_lane.waypoints[closest_idx:farthest_idx]
+#         rospy.logwarn('Base waypoints from %d to %d', closest_idx, farthest_idx)
+        base_waypoints = self.base_waypoints.waypoints[closest_idx:farthest_idx]
 
         if self.stopline_wp_idx == -1 or (self.stopline_wp_idx >= farthest_idx):
             lane.waypoints = base_waypoints
         else:
+            rospy.logwarn('Decelerating because of traffic')
             lane.waypoints = self.decelerate_waypoints(base_waypoints, closest_idx)
 
         return lane
@@ -122,16 +119,14 @@ class WaypointUpdater(object):
             p.twist.twist.linear.x = min(vel, wp.twist.twist.linear.x)
             temp.append(p)
         
+        rospy.logwarn('Decelerating because of traffic %d', len(temp))
+        
         return temp
 
     def pose_cb(self, msg):
-        # TODO: Implement
-        rospy.loginfo('stop pose_cb')
         self.pose = msg
 
     def waypoints_cb(self, waypoints):
-        # TODO: Implement
-        rospy.loginfo('stop waypoints_cb')
         self.base_waypoints = waypoints
         if not self.waypoints_2d:
             self.waypoints_2d  = [[waypoint.pose.pose.position.x, waypoint.pose.pose.position.y] for waypoint in waypoints.waypoints]

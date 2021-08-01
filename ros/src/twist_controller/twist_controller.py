@@ -1,4 +1,4 @@
-from ros.src.twist_controller.lowpass import LowPassFilter
+from lowpass import LowPassFilter
 from yaw_controller import YawController
 from pid import PID
 import rospy
@@ -55,6 +55,13 @@ class Controller(object):
 
         throttle = self.throttle_controller.step(vel_error, sample_time)
         brake = 0
+        
+#         rospy.logwarn("Target velocity: {0}".format(linear_vel))
+#         rospy.logwarn("Target angular velocity: {0}".format(angular_vel))
+#         rospy.logwarn("Current velocity: {0}".format(current_vel))
+#         rospy.logwarn("Filtered velocity: {0}".format(self.vel_lpf.get()))
+#         rospy.logwarn("Steering: {0}".format(steering))
+#         rospy.logwarn(" ")
 
         if linear_vel == 0. and current_vel < 0.1:
             throttle = 0
