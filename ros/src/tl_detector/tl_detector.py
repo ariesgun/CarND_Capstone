@@ -73,7 +73,6 @@ class TLDetector(object):
             msg (Image): image from car-mounted camera
 
         """
-        rospy.loginfo('Traffic test')
         self.has_image = True
         self.camera_image = msg
         light_wp, state = self.process_traffic_lights()
@@ -91,6 +90,7 @@ class TLDetector(object):
             self.last_state = self.state
             light_wp = light_wp if state == TrafficLight.RED else -1
             self.last_wp = light_wp
+            #rospy.logwarn("Publishing traffic %d", light_wp)
             self.upcoming_red_light_pub.publish(Int32(light_wp))
         else:
             self.upcoming_red_light_pub.publish(Int32(self.last_wp))
@@ -152,7 +152,7 @@ class TLDetector(object):
 
             diff = len(self.waypoints.waypoints)
             for i, light in enumerate(self.lights):
-                rospy.logwarn("Enumerating %d", i)
+                #rospy.logwarn("Enumerating %d", i)
                 # Get stop line waypoint index
                 line = stop_line_positions[i]
                 temp_wp_idx = self.get_closest_waypoint(line[0], line[1])
@@ -165,17 +165,9 @@ class TLDetector(object):
 
         if closest_light:
             state = self.get_light_state(closest_light)
-            rospy.logwarn('Closest light %d', line_wp_idx)
+            #rospy.logwarn('Closest light %d', line_wp_idx)
             return line_wp_idx, state
 
-        return -1, TrafficLight.UNKNOWN
-
-        #TODO find the closest visible traffic light (if one exists)
-
-        if light:
-            state = self.get_light_state(light)
-            return light_wp, state
-        self.waypoints = None
         return -1, TrafficLight.UNKNOWN
 
 if __name__ == '__main__':
